@@ -1,0 +1,12 @@
+// Gradle init script to handle Java 25 compatibility
+// This runs before any build.gradle.kts is evaluated
+
+gradle.beforeProject {
+    // Try to set Java toolchain for all projects
+    if (project.hasProperty('java')) {
+        project.java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+// Disable Kotlin DSL compilation cache to avoid version detection
+gradle.startParameter.setConfigurationCacheEnabled(false)

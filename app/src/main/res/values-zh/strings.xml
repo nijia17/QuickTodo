@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">LockTodo</string>
+    <string name="title_today">今日待办</string>
+    <string name="title_all_tasks">所有任务</string>
+    <string name="title_add_task">添加任务</string>
+    <string name="hint_task_input">输入任务...</string>
+    <string name="btn_add">添加</string>
+    <string name="btn_delete">删除</string>
+    <string name="btn_confirm">确认</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_edit">编辑</string>
+    <string name="btn_toggle">切换</string>
+    <string name="label_urgent">紧急</string>
+    <string name="text_no_tasks">暂无任务</string>
+    <string name="text_completed">已完成</string>
+    <string name="text_settings">设置</string>
+    <string name="text_language">语言</string>
+    <string name="text_chinese">中文</string>
+    <string name="text_english">English</string>
+</resources>
