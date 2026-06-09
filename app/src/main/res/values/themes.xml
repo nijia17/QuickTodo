@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.LockTodo" parent="android:Theme.Material.Light.NoActionBar" />
+    
+    <style name="Theme.LockTodo.Dialog" parent="android:Theme.Material.Light.Dialog.MinWidth">
+        <item name="android:windowBackground">#FFFFFF</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
 </resources>

@@ -17,4 +17,6 @@
     <string name="text_language">语言</string>
     <string name="text_chinese">中文</string>
     <string name="text_english">English</string>
+    <string name="hint_add_task">输入任务...</string>
+    <string name="save">保存</string>
 </resources>

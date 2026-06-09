@@ -31,6 +31,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <activity
+            android:name=".AddTaskActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LockTodo.Dialog">
+        </activity>
         <receiver 
             android:name=".LockTodoWidget"
             android:exported="true"

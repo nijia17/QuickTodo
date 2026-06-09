@@ -5,24 +5,40 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@drawable/widget_background">
+    android:background="#FAFAFA">
 
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/title_today"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#2D2D2D"
-        android:layout_marginBottom="12dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/title_today"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#2D2D2D"/>
+
+        <TextView
+            android:id="@+id/btn_add"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="+"
+            android:textSize="24sp"
+            android:textColor="#2D2D2D"
+            android:gravity="center"/>
+    </LinearLayout>
 
     <ListView
         android:id="@+id/lv_tasks"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:divider="@null"
-        android:dividerHeight="8dp"
-        android:scrollbars="none"/>
+        android:dividerHeight="8dp"/>
 
 </LinearLayout>

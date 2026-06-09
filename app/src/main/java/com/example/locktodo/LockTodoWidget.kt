@@ -51,6 +51,17 @@ class LockTodoWidget : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.tv_title, appPendingIntent)
 
+            // 添加按钮点击事件 - 打开添加任务Activity
+            val addIntent = Intent(context, AddTaskActivity::class.java)
+            addIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            val addPendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                addIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.btn_add, addPendingIntent)
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
