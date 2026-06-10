@@ -53,8 +53,11 @@ git clone https://github.com/nijia17/QuickTodo.git
 
 ## 📷 界面展示
 
-- **APP主界面**：简约ins风设计，支持任务的添加、完成、删除操作
-- **桌面小组件**：白色圆角卡片样式，显示待办数量，紧急任务红色「!」标记
+### 桌面小组件
+![桌面小组件](https://raw.githubusercontent.com/nijia17/QuickTodo/main/screenshots/widget.png)
+
+### APP主界面
+![APP主界面](https://raw.githubusercontent.com/nijia17/QuickTodo/main/screenshots/app.png)
 
 ## 📄 许可证
 
