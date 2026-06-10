@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">LockTodo</string>
+    <string name="app_name">QuickTodo</string>
     <string name="title_today">今日待办</string>
     <string name="title_all_tasks">所有任务</string>
     <string name="title_add_task">添加任务</string>

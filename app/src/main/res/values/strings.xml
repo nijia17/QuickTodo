@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">LockTodo</string>
+    <string name="app_name">QuickTodo</string>
     <string name="title_today">Today</string>
     <string name="title_all_tasks">All Tasks</string>
     <string name="title_add_task">Add Task</string>
