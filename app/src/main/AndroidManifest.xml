@@ -38,7 +38,7 @@
             android:theme="@style/Theme.QuickTodo.Dialog">
         </activity>
         <receiver 
-            android:name=".LockTodoWidget"
+            android:name=".QuickTodoWidget"
             android:exported="true"
             android:permission="android.permission.BIND_APPWIDGET">
             <intent-filter>
@@ -46,8 +46,8 @@
                 <action android:name="android.appwidget.action.APPWIDGET_ENABLED"/>
                 <action android:name="android.appwidget.action.APPWIDGET_DISABLED"/>
                 <action android:name="android.appwidget.action.APPWIDGET_DELETED"/>
-                <action android:name="com.example.locktodo.TOGGLE_TASK"/>
-                <action android:name="com.example.locktodo.WIDGET_UPDATE"/>
+                <action android:name="com.example.quicktodo.TOGGLE_TASK"/>
+                <action android:name="com.example.quicktodo.WIDGET_UPDATE"/>
                 <!-- 为 ColorOS 添加 DEFAULT category，使其能被系统识别为快捷卡片 -->
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

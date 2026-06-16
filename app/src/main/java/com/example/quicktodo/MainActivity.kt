@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -365,8 +365,7 @@ fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
             }
         }
 
-        // 紧急标记（在任务标题前）
-        if (task.isUrgent && !task.isFinish) {
+        // 紧急标记（在任务标题前�?        if (task.isUrgent && !task.isFinish) {
             Text(
                 text = "!",
                 fontSize = 18.sp,

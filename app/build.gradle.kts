@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.locktodo"
+    namespace = "com.example.quicktodo"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.locktodo"
+        applicationId = "com.example.quicktodo"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import android.content.Intent
 import android.app.Activity
@@ -45,14 +45,13 @@ class AddTaskActivity : Activity() {
 
     private fun refreshWidget() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
-        val componentName = ComponentName(this, LockTodoWidget::class.java)
+        val componentName = ComponentName(this, QuickTodoWidget::class.java)
         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
         
         if (appWidgetIds.isNotEmpty()) {
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.lv_tasks)
             
-            // 强制更新小组件
-            val intent = Intent(this, LockTodoWidget::class.java)
+            // 强制更新小组�?            val intent = Intent(this, QuickTodoWidget::class.java)
             intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
             sendBroadcast(intent)

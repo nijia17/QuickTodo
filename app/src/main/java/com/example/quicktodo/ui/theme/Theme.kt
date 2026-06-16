@@ -1,4 +1,4 @@
-package com.example.locktodo.ui.theme
+package com.example.quicktodo.ui.theme
 
 import android.app.Activity
 import android.os.Build

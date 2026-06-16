@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import android.content.Context
 import android.content.Intent
@@ -29,7 +29,7 @@ class TaskViewModel(private val repo: TaskRepo, private val context: Context):Vi
     }
 
     private fun notifyWidget() {
-        val intent = Intent("com.example.locktodo.WIDGET_UPDATE").apply {
+        val intent = Intent("com.example.quicktodo.WIDGET_UPDATE").apply {
             `package` = context.packageName
         }
         context.sendBroadcast(intent)

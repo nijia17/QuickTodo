@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import android.content.Intent
 import android.widget.RemoteViewsService

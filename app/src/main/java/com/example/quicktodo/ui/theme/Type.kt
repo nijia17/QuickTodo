@@ -1,4 +1,4 @@
-package com.example.locktodo.ui.theme
+package com.example.quicktodo.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

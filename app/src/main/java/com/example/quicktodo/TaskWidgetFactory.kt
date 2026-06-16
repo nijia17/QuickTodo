@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import android.content.Context
 import android.content.Intent
@@ -34,11 +34,11 @@ class TaskWidgetFactory(private val context: Context) : RemoteViewsService.Remot
 
         // 设置复选框显示
         if (task.isFinish) {
-            rv.setTextViewText(R.id.tv_checkbox, "✓")
+            rv.setTextViewText(R.id.tv_checkbox, "�?)
             rv.setTextColor(R.id.tv_task_title, context.getColor(android.R.color.darker_gray))
             rv.setInt(R.id.tv_task_title, "setPaintFlags", android.graphics.Paint.STRIKE_THRU_TEXT_FLAG)
         } else {
-            rv.setTextViewText(R.id.tv_checkbox, "○")
+            rv.setTextViewText(R.id.tv_checkbox, "�?)
             rv.setTextColor(R.id.tv_task_title, context.getColor(android.R.color.black))
             rv.setInt(R.id.tv_task_title, "setPaintFlags", 0)
         }
@@ -46,14 +46,13 @@ class TaskWidgetFactory(private val context: Context) : RemoteViewsService.Remot
         // 设置任务标题
         rv.setTextViewText(R.id.tv_task_title, task.title)
 
-        // 设置紧急标记
-        if (task.isUrgent && !task.isFinish) {
+        // 设置紧急标�?        if (task.isUrgent && !task.isFinish) {
             rv.setTextViewText(R.id.tv_urgent, "!")
         } else {
             rv.setTextViewText(R.id.tv_urgent, "")
         }
 
-        // 创建 fillInIntent 用于传递 task_id，设置在整个列表项容器上
+        // 创建 fillInIntent 用于传�?task_id，设置在整个列表项容器上
         val fillInIntent = Intent().apply {
             putExtra("task_id", task.id)
         }

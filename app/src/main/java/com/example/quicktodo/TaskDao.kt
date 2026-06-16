@@ -1,4 +1,4 @@
-package com.example.locktodo
+package com.example.quicktodo
 
 import androidx.room.Dao
 import androidx.room.Delete
