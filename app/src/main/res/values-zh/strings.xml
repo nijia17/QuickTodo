@@ -10,13 +10,26 @@
     <string name="btn_cancel">取消</string>
     <string name="btn_edit">编辑</string>
     <string name="btn_toggle">切换</string>
+    <string name="btn_select_date">选择日期</string>
     <string name="label_urgent">紧急</string>
+    <string name="label_high">高</string>
+    <string name="label_medium">中</string>
+    <string name="label_low">低</string>
+    <string name="label_study">学习</string>
+    <string name="label_work">工作</string>
+    <string name="label_life">生活</string>
+    <string name="label_other">其他</string>
+    <string name="label_deadline">截止日期</string>
     <string name="text_no_tasks">暂无任务</string>
     <string name="text_completed">已完成</string>
     <string name="text_settings">设置</string>
     <string name="text_language">语言</string>
     <string name="text_chinese">中文</string>
     <string name="text_english">English</string>
+    <string name="text_stats">数据统计</string>
+    <string name="text_tasks">任务列表</string>
+    <string name="text_completion_rate">完成率</string>
+    <string name="text_ai_auto_analyze">AI将根据内容和截止时间自动分析优先级</string>
     <string name="hint_add_task">输入任务...</string>
     <string name="save">保存</string>
 </resources>

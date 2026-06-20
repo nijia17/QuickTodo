@@ -16,13 +16,11 @@
         android:textColor="#2D2D2D"/>
 
     <TextView
-        android:id="@+id/tv_urgent"
+        android:id="@+id/tv_priority"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingLeft="8dp"
-        android:textSize="16sp"
-        android:textColor="#E53935"
-        android:textStyle="bold"/>
+        android:textSize="14sp"/>
 
     <TextView
         android:id="@+id/tv_task_title"

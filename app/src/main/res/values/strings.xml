@@ -10,13 +10,26 @@
     <string name="btn_cancel">Cancel</string>
     <string name="btn_edit">Edit</string>
     <string name="btn_toggle">Toggle</string>
+    <string name="btn_select_date">Select Date</string>
     <string name="label_urgent">Urgent</string>
+    <string name="label_high">High</string>
+    <string name="label_medium">Medium</string>
+    <string name="label_low">Low</string>
+    <string name="label_study">Study</string>
+    <string name="label_work">Work</string>
+    <string name="label_life">Life</string>
+    <string name="label_other">Other</string>
+    <string name="label_deadline">Deadline</string>
     <string name="text_no_tasks">No tasks yet</string>
     <string name="text_completed">Completed</string>
     <string name="text_settings">Settings</string>
     <string name="text_language">Language</string>
     <string name="text_chinese">Chinese</string>
     <string name="text_english">English</string>
+    <string name="text_stats">Statistics</string>
+    <string name="text_tasks">Tasks</string>
+    <string name="text_completion_rate">Completion Rate</string>
+    <string name="text_ai_auto_analyze">AI will automatically analyze priority based on content and deadline</string>
     <string name="hint_add_task">Enter task...</string>
     <string name="save">Save</string>
 </resources>

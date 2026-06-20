@@ -9,4 +9,7 @@ class TaskRepo(private val dao: TaskDao) {
     suspend fun insert(task: Task) = dao.insertTask(task)
     suspend fun update(task: Task) = dao.updateTask(task)
     suspend fun delete(task: Task) = dao.deleteTask(task)
+
+    suspend fun getCompletedCount(): Int = dao.getCompletedCount()
+    suspend fun getTotalCount(): Int = dao.getTotalCount()
 }

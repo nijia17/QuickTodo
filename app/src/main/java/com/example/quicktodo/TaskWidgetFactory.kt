@@ -18,11 +18,11 @@ class TaskWidgetFactory(private val context: Context) : RemoteViewsService.Remot
     override fun onDataSetChanged() {
         taskList = runBlocking {
             db.taskDao().getAllTaskList()
-        }
+        }.filter { !it.isFinish }
     }
 
     override fun onDestroy() {
-        // 清理资源
+        // Clean up resources
     }
 
     override fun getCount(): Int = taskList.size.coerceAtMost(6)
@@ -32,27 +32,33 @@ class TaskWidgetFactory(private val context: Context) : RemoteViewsService.Remot
 
         val rv = RemoteViews(context.packageName, R.layout.widget_task_item)
 
-        // 设置复选框显示
         if (task.isFinish) {
-            rv.setTextViewText(R.id.tv_checkbox, "�?)
+            rv.setTextViewText(R.id.tv_checkbox, "\u2713")
             rv.setTextColor(R.id.tv_task_title, context.getColor(android.R.color.darker_gray))
             rv.setInt(R.id.tv_task_title, "setPaintFlags", android.graphics.Paint.STRIKE_THRU_TEXT_FLAG)
         } else {
-            rv.setTextViewText(R.id.tv_checkbox, "�?)
+            rv.setTextViewText(R.id.tv_checkbox, "\u25CB")
             rv.setTextColor(R.id.tv_task_title, context.getColor(android.R.color.black))
             rv.setInt(R.id.tv_task_title, "setPaintFlags", 0)
         }
 
-        // 设置任务标题
         rv.setTextViewText(R.id.tv_task_title, task.title)
 
-        // 设置紧急标�?        if (task.isUrgent && !task.isFinish) {
-            rv.setTextViewText(R.id.tv_urgent, "!")
-        } else {
-            rv.setTextViewText(R.id.tv_urgent, "")
+        when (task.priority) {
+            Priority.HIGH.name -> {
+                rv.setTextViewText(R.id.tv_priority, "\uD83D\uDEA8")
+                rv.setTextColor(R.id.tv_priority, context.getColor(android.R.color.holo_red_dark))
+            }
+            Priority.MEDIUM.name -> {
+                rv.setTextViewText(R.id.tv_priority, "\u26A0\uFE0F")
+                rv.setTextColor(R.id.tv_priority, context.getColor(android.R.color.holo_orange_dark))
+            }
+            else -> {
+                rv.setTextViewText(R.id.tv_priority, "\uD83D\uDCCD")
+                rv.setTextColor(R.id.tv_priority, context.getColor(android.R.color.holo_green_dark))
+            }
         }
 
-        // 创建 fillInIntent 用于传�?task_id，设置在整个列表项容器上
         val fillInIntent = Intent().apply {
             putExtra("task_id", task.id)
         }

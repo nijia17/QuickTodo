@@ -1,6 +1,7 @@
 package com.example.quicktodo
 
 import android.os.Bundle
+import android.widget.DatePicker
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -68,11 +70,19 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun TodoPage(vm: TaskViewModel) {
     val taskList by vm.allTask.collectAsStateWithLifecycle(initialValue = emptyList())
+    val completedCount by vm.completedCount.collectAsStateWithLifecycle(initialValue = 0)
+    val totalCount by vm.totalCount.collectAsStateWithLifecycle(initialValue = 0)
+
     var showAddDialog by remember { mutableStateOf(false) }
     var inputTitle by remember { mutableStateOf("") }
-    var isUrgent by remember { mutableStateOf(false) }
+    var selectedDeadline by remember { mutableStateOf(0L) }
+    var selectedCategory by remember { mutableStateOf(Category.OTHER.name) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        vm.loadStats()
+    }
 
     Scaffold(
         topBar = {
@@ -112,7 +122,6 @@ fun TodoPage(vm: TaskViewModel) {
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp)
         ) {
-            // 统计信息
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -129,7 +138,58 @@ fun TodoPage(vm: TaskViewModel) {
                 )
             }
 
-            // 任务列表
+            if (totalCount > 0) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.text_stats),
+                            fontSize = 14.sp,
+                            color = Color(0xFF999999),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF2D2D2D)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${if (totalCount > 0) (completedCount * 100 / totalCount) else 0}%",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column(modifier = Modifier.padding(start = 16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.text_completion_rate),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Light
+                                )
+                                Text(
+                                    text = "${completedCount}/${totalCount} ${stringResource(R.string.text_completed)}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF999999)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.text_tasks),
+                fontSize = 14.sp,
+                color = Color(0xFF999999),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -150,19 +210,24 @@ fun TodoPage(vm: TaskViewModel) {
                     }
                 } else {
                     items(taskList, key = { it.id }) { item ->
-                        TaskCard(task = item, onToggle = { vm.toggleTask(item) }, onDelete = { vm.removeTask(item) })
+                        TaskCard(
+                            task = item,
+                            onToggle = { vm.toggleTask(item) },
+                            onDelete = { vm.removeTask(item) },
+                            prioritySuggestion = vm.getPrioritySuggestion(item)
+                        )
                     }
                 }
             }
         }
 
-        // 添加任务弹窗
         if (showAddDialog) {
             AlertDialog(
                 onDismissRequest = {
                     showAddDialog = false
                     inputTitle = ""
-                    isUrgent = false
+                    selectedDeadline = 0L
+                    selectedCategory = Category.OTHER.name
                 },
                 title = {
                     Text(
@@ -188,34 +253,90 @@ fun TodoPage(vm: TaskViewModel) {
                             ),
                             shape = RoundedCornerShape(12.dp)
                         )
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 12.dp)
+                            modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Checkbox(
-                                checked = isUrgent,
-                                onCheckedChange = { isUrgent = it },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = Color(0xFFE53935),
-                                    uncheckedColor = Color(0xFFCCCCCC)
-                                )
-                            )
-                            Text(
-                                stringResource(R.string.label_urgent),
-                                fontSize = 14.sp,
-                                color = if (isUrgent) Color(0xFFE53935) else Color(0xFF999999)
-                            )
+                            val categories = Category.values().map {
+                                when (it) {
+                                    Category.STUDY -> "📚 ${stringResource(R.string.label_study)}"
+                                    Category.WORK -> "💼 ${stringResource(R.string.label_work)}"
+                                    Category.LIFE -> "🏠 ${stringResource(R.string.label_life)}"
+                                    Category.OTHER -> "📌 ${stringResource(R.string.label_other)}"
+                                }
+                            }
+                            categories.forEachIndexed { index, cat ->
+                                Button(
+                                    onClick = { selectedCategory = Category.values()[index].name },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (selectedCategory == Category.values()[index].name) Color(0xFF2D2D2D) else Color(0xFFFAFAFA),
+                                        contentColor = if (selectedCategory == Category.values()[index].name) Color.White else Color(0xFF2D2D2D)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                                ) {
+                                    Text(cat, fontSize = 10.sp)
+                                }
+                            }
                         }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 12.dp).fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.label_deadline),
+                                fontSize = 14.sp,
+                                color = Color(0xFF999999),
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = {
+                                val calendar = Calendar.getInstance()
+                                android.app.DatePickerDialog(
+                                    context,
+                                    { _, year, month, day ->
+                                        val selectedDate = Calendar.getInstance()
+                                        selectedDate.set(year, month, day, 23, 59, 59)
+                                        selectedDeadline = selectedDate.timeInMillis
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            }) {
+                                Text(
+                                    text = if (selectedDeadline > 0) {
+                                        val date = Calendar.getInstance()
+                                        date.timeInMillis = selectedDeadline
+                                        "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)}"
+                                    } else {
+                                        stringResource(R.string.btn_select_date)
+                                    },
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF2D2D2D)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = stringResource(R.string.text_ai_auto_analyze),
+                            fontSize = 12.sp,
+                            color = Color(0xFF666666),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             if (inputTitle.isNotBlank()) {
-                                vm.addTask(Task(title = inputTitle.trim(), isUrgent = isUrgent))
+                                vm.addTaskWithAI(inputTitle.trim(), selectedDeadline)
                                 showAddDialog = false
                                 inputTitle = ""
-                                isUrgent = false
+                                selectedDeadline = 0L
+                                selectedCategory = Category.OTHER.name
                             }
                         },
                         enabled = inputTitle.isNotBlank()
@@ -231,7 +352,8 @@ fun TodoPage(vm: TaskViewModel) {
                     TextButton(onClick = {
                         showAddDialog = false
                         inputTitle = ""
-                        isUrgent = false
+                        selectedDeadline = 0L
+                        selectedCategory = Category.OTHER.name
                     }) {
                         Text(
                             stringResource(R.string.btn_cancel),
@@ -245,7 +367,6 @@ fun TodoPage(vm: TaskViewModel) {
             )
         }
 
-        // 语言设置弹窗
         if (showSettingsDialog) {
             AlertDialog(
                 onDismissRequest = { showSettingsDialog = false }
@@ -325,80 +446,134 @@ fun setAppLanguage(context: android.content.Context, language: String) {
 }
 
 @Composable
-fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
-    Row(
+fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySuggestion: String) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onToggle() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // 圆形选择按钮
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .clickable { onToggle() },
-            contentAlignment = Alignment.Center
-        ) {
-            if (task.isFinish) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
                     modifier = Modifier
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF2D2D2D)),
+                        .clickable { onToggle() },
                     contentAlignment = Alignment.Center
                 ) {
+                    if (task.isFinish) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2D2D2D)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .border(1.5.dp, Color(0xFFE0E0E0))
+                        )
+                    }
+                }
+
+                val priorityColor = when (task.priority) {
+                    Priority.HIGH.name -> Color(0xFFE53935)
+                    Priority.MEDIUM.name -> Color(0xFFFF9800)
+                    else -> Color(0xFF4CAF50)
+                }
+
+                val priorityLabel = when (task.priority) {
+                    Priority.HIGH.name -> "🚨 ${stringResource(R.string.label_high)}"
+                    Priority.MEDIUM.name -> "⚠️ ${stringResource(R.string.label_medium)}"
+                    else -> "📌 ${stringResource(R.string.label_low)}"
+                }
+
+                Text(
+                    text = priorityLabel,
+                    fontSize = 12.sp,
+                    color = priorityColor,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+
+                val categoryIcon = when (task.category) {
+                    Category.STUDY.name -> "📚"
+                    Category.WORK.name -> "💼"
+                    Category.LIFE.name -> "🏠"
+                    else -> "📌"
+                }
+
+                Text(
+                    text = categoryIcon,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+
+                Text(
+                    text = task.title,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 16.dp),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Light,
+                    color = if (task.isFinish) Color(0xFFCCCCCC) else Color(0xFF2D2D2D),
+                    textDecoration = if (task.isFinish) TextDecoration.LineThrough else null,
+                    letterSpacing = 0.5.sp
+                )
+
+                IconButton(
+                    onClick = { onDelete() },
+                    modifier = Modifier.size(32.dp)
+                ) {
                     Icon(
-                        Icons.Default.Check,
-                        contentDescription = "Completed",
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp)
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFCCCCCC),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, Color(0xFFE0E0E0))
+            }
+
+            if (task.deadline > 0) {
+                val date = Calendar.getInstance()
+                date.timeInMillis = task.deadline
+                val deadlineText = "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)}"
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📅 ${stringResource(R.string.label_deadline)}: $deadlineText",
+                        fontSize = 12.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.padding(start = 36.dp)
+                    )
+                }
+            }
+
+            if (!task.isFinish) {
+                Text(
+                    text = prioritySuggestion,
+                    fontSize = 12.sp,
+                    color = Color(0xFF666666),
+                    modifier = Modifier.padding(top = 4.dp).padding(start = 36.dp)
                 )
             }
-        }
-
-        // 紧急标记（在任务标题前�?        if (task.isUrgent && !task.isFinish) {
-            Text(
-                text = "!",
-                fontSize = 18.sp,
-                color = Color(0xFFE53935),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 12.dp)
-            )
-        }
-
-        // 任务标题
-        Text(
-            text = task.title,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = if (task.isUrgent && !task.isFinish) 8.dp else 16.dp),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Light,
-            color = if (task.isFinish) Color(0xFFCCCCCC) else Color(0xFF2D2D2D),
-            textDecoration = if (task.isFinish) TextDecoration.LineThrough else null,
-            letterSpacing = 0.5.sp
-        )
-
-        // 删除按钮
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = Color(0xFFCCCCCC),
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }
