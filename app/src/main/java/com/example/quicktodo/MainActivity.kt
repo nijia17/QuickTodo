@@ -1,10 +1,15 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.quicktodo
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.widget.DatePicker
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -38,10 +42,21 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     lateinit var vm: TaskViewModel
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
+        NotificationHelper.createNotificationChannel(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         val db = AppDatabase.getInstance(this)
         val repo = TaskRepo(db.taskDao())
         vm = ViewModelProvider(this, TaskVMFactory(repo, this))[TaskViewModel::class.java]
@@ -64,24 +79,41 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        if (::vm.isInitialized) {
+            vm.loadStats()
+        }
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoPage(vm: TaskViewModel) {
     val taskList by vm.allTask.collectAsStateWithLifecycle(initialValue = emptyList())
-    val completedCount by vm.completedCount.collectAsStateWithLifecycle(initialValue = 0)
-    val totalCount by vm.totalCount.collectAsStateWithLifecycle(initialValue = 0)
 
-    var showAddDialog by remember { mutableStateOf(false) }
-    var inputTitle by remember { mutableStateOf("") }
-    var selectedDeadline by remember { mutableStateOf(0L) }
-    var selectedCategory by remember { mutableStateOf(Category.OTHER.name) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showDetailDialog by remember { mutableStateOf(false) }
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
+    var showCompleted by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         vm.loadStats()
+    }
+
+    val requestDelete: (Task) -> Unit = { task ->
+        taskToDelete = task
+        showDeleteDialog = true
+    }
+
+    val confirmDelete: () -> Unit = {
+        taskToDelete?.let { vm.removeTask(it) }
+        showDeleteDialog = false
+        taskToDelete = null
+        showDetailDialog = false
     }
 
     Scaffold(
@@ -101,22 +133,14 @@ fun TodoPage(vm: TaskViewModel) {
                     actionIconContentColor = Color(0xFF2D2D2D)
                 ),
                 actions = {
-                    IconButton(onClick = { showSettingsDialog = true }) {
+                    IconButton(onClick = { context.startActivity(Intent(context, AddTaskActivity::class.java)) }) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.title_add_task))
+                    }
+                    IconButton(onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.text_settings))
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = Color(0xFF2D2D2D),
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                elevation = FloatingActionButtonDefaults.elevation(0.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task")
-            }
         }
     ) { padding ->
         Column(
@@ -127,68 +151,28 @@ fun TodoPage(vm: TaskViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${taskList.count { !it.isFinish }} ${stringResource(R.string.title_today).lowercase()}",
+                    text = "${taskList.count { !it.isFinish }} ${stringResource(R.string.text_today).lowercase()}",
                     fontSize = 14.sp,
                     color = Color(0xFF999999)
                 )
-                Text(
-                    text = "${taskList.count { it.isFinish }} ${stringResource(R.string.text_completed).lowercase()}",
-                    fontSize = 14.sp,
-                    color = Color(0xFF999999)
-                )
-            }
-
-            if (totalCount > 0) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.text_stats),
-                            fontSize = 14.sp,
-                            color = Color(0xFF999999),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF2D2D2D)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${if (totalCount > 0) (completedCount * 100 / totalCount) else 0}%",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column(modifier = Modifier.padding(start = 16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.text_completion_rate),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Light
-                                )
-                                Text(
-                                    text = "${completedCount}/${totalCount} ${stringResource(R.string.text_completed)}",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF999999)
-                                )
-                            }
-                        }
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.text_ai_sorted),
+                        fontSize = 12.sp,
+                        color = Color(0xFF2D2D2D),
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    Text(
+                        text = "${taskList.count { it.isFinish }} ${stringResource(R.string.text_completed).lowercase()}",
+                        fontSize = 14.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.clickable { context.startActivity(Intent(context, StatisticsActivity::class.java)) }
+                    )
                 }
             }
 
-            Text(
-                text = stringResource(R.string.text_tasks),
-                fontSize = 14.sp,
-                color = Color(0xFF999999),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            val unfinishedTasks = taskList.filter { !it.isFinish }
+            val completedTasks = taskList.filter { it.isFinish }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -209,157 +193,91 @@ fun TodoPage(vm: TaskViewModel) {
                         }
                     }
                 } else {
-                    items(taskList, key = { it.id }) { item ->
+                    items(unfinishedTasks, key = { it.id }) { item ->
                         TaskCard(
                             task = item,
                             onToggle = { vm.toggleTask(item) },
-                            onDelete = { vm.removeTask(item) },
-                            prioritySuggestion = vm.getPrioritySuggestion(item)
+                            onDelete = { requestDelete(item) },
+                            onClick = {
+                                selectedTask = item
+                                showDetailDialog = true
+                            }
                         )
                     }
-                }
-            }
-        }
 
-        if (showAddDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showAddDialog = false
-                    inputTitle = ""
-                    selectedDeadline = 0L
-                    selectedCategory = Category.OTHER.name
-                },
-                title = {
-                    Text(
-                        stringResource(R.string.title_add_task),
-                        fontWeight = FontWeight.Light,
-                        fontSize = 18.sp
-                    )
-                },
-                text = {
-                    Column {
-                        TextField(
-                            value = inputTitle,
-                            onValueChange = { inputTitle = it },
-                            placeholder = { Text(stringResource(R.string.hint_task_input), color = Color(0xFFCCCCCC)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(color = Color(0xFF2D2D2D)),
-                            colors = TextFieldDefaults.colors(
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = Color(0xFF2D2D2D),
-                                focusedContainerColor = Color(0xFFFAFAFA),
-                                unfocusedContainerColor = Color(0xFFFAFAFA)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            val categories = Category.values().map {
-                                when (it) {
-                                    Category.STUDY -> "📚 ${stringResource(R.string.label_study)}"
-                                    Category.WORK -> "💼 ${stringResource(R.string.label_work)}"
-                                    Category.LIFE -> "🏠 ${stringResource(R.string.label_life)}"
-                                    Category.OTHER -> "📌 ${stringResource(R.string.label_other)}"
-                                }
-                            }
-                            categories.forEachIndexed { index, cat ->
-                                Button(
-                                    onClick = { selectedCategory = Category.values()[index].name },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (selectedCategory == Category.values()[index].name) Color(0xFF2D2D2D) else Color(0xFFFAFAFA),
-                                        contentColor = if (selectedCategory == Category.values()[index].name) Color.White else Color(0xFF2D2D2D)
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                                ) {
-                                    Text(cat, fontSize = 10.sp)
-                                }
-                            }
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 12.dp).fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.label_deadline),
-                                fontSize = 14.sp,
-                                color = Color(0xFF999999),
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextButton(onClick = {
-                                val calendar = Calendar.getInstance()
-                                android.app.DatePickerDialog(
-                                    context,
-                                    { _, year, month, day ->
-                                        val selectedDate = Calendar.getInstance()
-                                        selectedDate.set(year, month, day, 23, 59, 59)
-                                        selectedDeadline = selectedDate.timeInMillis
-                                    },
-                                    calendar.get(Calendar.YEAR),
-                                    calendar.get(Calendar.MONTH),
-                                    calendar.get(Calendar.DAY_OF_MONTH)
-                                ).show()
-                            }) {
+                    if (completedTasks.isNotEmpty()) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showCompleted = !showCompleted }
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = if (selectedDeadline > 0) {
-                                        val date = Calendar.getInstance()
-                                        date.timeInMillis = selectedDeadline
-                                        "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)}"
-                                    } else {
-                                        stringResource(R.string.btn_select_date)
-                                    },
+                                    text = "${stringResource(R.string.text_finished)} (${completedTasks.size})",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF999999),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(if (showCompleted) R.string.text_collapse else R.string.text_expand),
                                     fontSize = 14.sp,
                                     color = Color(0xFF2D2D2D)
                                 )
                             }
                         }
 
-                        Text(
-                            text = stringResource(R.string.text_ai_auto_analyze),
-                            fontSize = 12.sp,
-                            color = Color(0xFF666666),
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (inputTitle.isNotBlank()) {
-                                vm.addTaskWithAI(inputTitle.trim(), selectedDeadline)
-                                showAddDialog = false
-                                inputTitle = ""
-                                selectedDeadline = 0L
-                                selectedCategory = Category.OTHER.name
+                        if (showCompleted) {
+                            items(completedTasks, key = { "completed_${it.id}" }) { item ->
+                                TaskCard(
+                                    task = item,
+                                    onToggle = { vm.toggleTask(item) },
+                                    onDelete = { requestDelete(item) },
+                                    onClick = {
+                                        selectedTask = item
+                                        showDetailDialog = true
+                                    }
+                                )
                             }
-                        },
-                        enabled = inputTitle.isNotBlank()
-                    ) {
-                        Text(
-                            stringResource(R.string.btn_add),
-                            fontSize = 14.sp,
-                            color = Color(0xFF2D2D2D)
-                        )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDetailDialog && selectedTask != null) {
+            TaskDetailDialog(
+                task = selectedTask!!,
+                onClose = { showDetailDialog = false },
+                onDelete = { requestDelete(selectedTask!!) },
+                onComplete = { vm.toggleTask(selectedTask!!); showDetailDialog = false },
+                onEdit = {
+                    showDetailDialog = false
+                }
+            )
+        }
+
+        if (showDeleteDialog && taskToDelete != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    taskToDelete = null
+                },
+                title = { Text(stringResource(R.string.text_delete_confirm_title), fontWeight = FontWeight.Light) },
+                text = { Text(stringResource(R.string.text_delete_confirm_message), fontSize = 14.sp, color = Color(0xFF666666)) },
+                confirmButton = {
+                    TextButton(onClick = confirmDelete) {
+                        Text(stringResource(R.string.btn_confirm), color = Color(0xFFE53935))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        showAddDialog = false
-                        inputTitle = ""
-                        selectedDeadline = 0L
-                        selectedCategory = Category.OTHER.name
+                        showDeleteDialog = false
+                        taskToDelete = null
                     }) {
-                        Text(
-                            stringResource(R.string.btn_cancel),
-                            fontSize = 14.sp,
-                            color = Color(0xFF999999)
-                        )
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999))
                     }
                 },
                 containerColor = Color.White,
@@ -438,19 +356,18 @@ fun setAppLanguage(context: android.content.Context, language: String) {
     val config = android.content.res.Configuration()
     config.setLocale(locale)
     resources.updateConfiguration(config, resources.displayMetrics)
-    
-    // 重启Activity以应用语言变化
+
     val intent = android.content.Intent(context, MainActivity::class.java)
     intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
     context.startActivity(intent)
 }
 
 @Composable
-fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySuggestion: String) {
+fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() },
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -476,7 +393,7 @@ fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySug
                         ) {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Completed",
+                                contentDescription = stringResource(R.string.text_completed),
                                 tint = Color.White,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -491,44 +408,25 @@ fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySug
                     }
                 }
 
-                val priorityColor = when (task.priority) {
-                    Priority.HIGH.name -> Color(0xFFE53935)
-                    Priority.MEDIUM.name -> Color(0xFFFF9800)
-                    else -> Color(0xFF4CAF50)
+                val priorityIcon = when (task.priority) {
+                    Priority.HIGH.name -> "🚨"
+                    Priority.MEDIUM.name -> "⚠️"
+                    else -> "🟢"
                 }
 
-                val priorityLabel = when (task.priority) {
-                    Priority.HIGH.name -> "🚨 ${stringResource(R.string.label_high)}"
-                    Priority.MEDIUM.name -> "⚠️ ${stringResource(R.string.label_medium)}"
-                    else -> "📌 ${stringResource(R.string.label_low)}"
+                if (!task.isFinish) {
+                    Text(
+                        text = priorityIcon,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
-
-                Text(
-                    text = priorityLabel,
-                    fontSize = 12.sp,
-                    color = priorityColor,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-
-                val categoryIcon = when (task.category) {
-                    Category.STUDY.name -> "📚"
-                    Category.WORK.name -> "💼"
-                    Category.LIFE.name -> "🏠"
-                    else -> "📌"
-                }
-
-                Text(
-                    text = categoryIcon,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
 
                 Text(
                     text = task.title,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 16.dp),
+                        .padding(start = if (!task.isFinish) 6.dp else 12.dp),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Light,
                     color = if (task.isFinish) Color(0xFFCCCCCC) else Color(0xFF2D2D2D),
@@ -542,7 +440,7 @@ fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySug
                 ) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.btn_delete),
                         tint = Color(0xFFCCCCCC),
                         modifier = Modifier.size(18.dp)
                     )
@@ -552,28 +450,147 @@ fun TaskCard(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, prioritySug
             if (task.deadline > 0) {
                 val date = Calendar.getInstance()
                 date.timeInMillis = task.deadline
-                val deadlineText = "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)}"
+
+                val now = Calendar.getInstance()
+                val isToday = date.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
+                        date.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+
+                val deadlineText = if (isToday) {
+                    stringResource(R.string.text_tonight) + " ${date.get(Calendar.HOUR)}:${String.format("%02d", date.get(Calendar.MINUTE))}"
+                } else {
+                    "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)}"
+                }
+
                 Row(
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "📅 ${stringResource(R.string.label_deadline)}: $deadlineText",
-                        fontSize = 12.sp,
-                        color = Color(0xFF999999),
+                        text = deadlineText,
+                        fontSize = 11.sp,
+                        color = Color(0xFFCCCCCC),
                         modifier = Modifier.padding(start = 36.dp)
                     )
                 }
             }
-
-            if (!task.isFinish) {
-                Text(
-                    text = prioritySuggestion,
-                    fontSize = 12.sp,
-                    color = Color(0xFF666666),
-                    modifier = Modifier.padding(top = 4.dp).padding(start = 36.dp)
-                )
-            }
         }
     }
+}
+
+@Composable
+fun TaskDetailDialog(
+    task: Task,
+    onClose: () -> Unit,
+    onDelete: () -> Unit,
+    onComplete: () -> Unit,
+    onEdit: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = {
+            Text(
+                task.title,
+                fontWeight = FontWeight.Light,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.label_priority),
+                        fontSize = 14.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.weight(1f)
+                    )
+                    val priorityLabel = when (task.priority) {
+                        Priority.HIGH.name -> stringResource(R.string.label_high)
+                        Priority.MEDIUM.name -> stringResource(R.string.label_medium)
+                        else -> stringResource(R.string.label_low)
+                    }
+                    Text(
+                        priorityLabel,
+                        fontSize = 14.sp,
+                        color = when (task.priority) {
+                            Priority.HIGH.name -> Color(0xFFE53935)
+                            Priority.MEDIUM.name -> Color(0xFFFF9800)
+                            else -> Color(0xFF4CAF50)
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.label_deadline),
+                        fontSize = 14.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (task.deadline > 0) {
+                        val date = Calendar.getInstance()
+                        date.timeInMillis = task.deadline
+                        Text(
+                            "${date.get(Calendar.MONTH) + 1}/${date.get(Calendar.DAY_OF_MONTH)} ${date.get(Calendar.HOUR)}:${date.get(Calendar.MINUTE)}",
+                            fontSize = 14.sp,
+                            color = Color(0xFF2D2D2D)
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.text_none),
+                            fontSize = 14.sp,
+                            color = Color(0xFFCCCCCC)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.label_category),
+                        fontSize = 14.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.weight(1f)
+                    )
+                    val categoryLabel = when (task.category) {
+                        Category.STUDY.name -> stringResource(R.string.label_study)
+                        Category.WORK.name -> stringResource(R.string.label_work)
+                        Category.LIFE.name -> stringResource(R.string.label_life)
+                        else -> stringResource(R.string.label_other)
+                    }
+                    Text(
+                        categoryLabel,
+                        fontSize = 14.sp,
+                        color = Color(0xFF2D2D2D)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row {
+                TextButton(onClick = onEdit) {
+                    Text(stringResource(R.string.btn_edit), fontSize = 14.sp, color = Color(0xFF2D2D2D))
+                }
+                if (!task.isFinish) {
+                    TextButton(onClick = onComplete) {
+                        Text(stringResource(R.string.btn_complete), fontSize = 14.sp, color = Color(0xFF4CAF50))
+                    }
+                }
+                TextButton(onClick = onDelete) {
+                    Text(stringResource(R.string.btn_delete), fontSize = 14.sp, color = Color(0xFFE53935))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) {
+                Text(stringResource(R.string.btn_close), fontSize = 14.sp, color = Color(0xFF999999))
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp)
+    )
 }

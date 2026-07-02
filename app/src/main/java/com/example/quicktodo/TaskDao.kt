@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: Task)
+    suspend fun insertTask(task: Task): Long
 
     @Update
     suspend fun updateTask(task: Task)
@@ -19,16 +19,16 @@ interface TaskDao {
     @Delete
     suspend fun deleteTask(task: Task)
 
-    @Query("SELECT * FROM task_table WHERE isFinish = 0 ORDER BY priority DESC, deadline ASC")
+    @Query("SELECT * FROM task_table WHERE isFinish = 0 ORDER BY CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END ASC, deadline ASC")
     fun getUnFinishTask(): Flow<List<Task>>
 
-    @Query("SELECT * FROM task_table WHERE isFinish = 0 ORDER BY priority DESC, deadline ASC")
+    @Query("SELECT * FROM task_table WHERE isFinish = 0 ORDER BY CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END ASC, deadline ASC")
     suspend fun getUnFinishTaskList(): List<Task>
 
-    @Query("SELECT * FROM task_table ORDER BY isFinish ASC, priority DESC, deadline ASC")
+    @Query("SELECT * FROM task_table ORDER BY isFinish ASC, CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END ASC, deadline ASC")
     fun getAllTask(): Flow<List<Task>>
 
-    @Query("SELECT * FROM task_table ORDER BY isFinish ASC, priority DESC, deadline ASC")
+    @Query("SELECT * FROM task_table ORDER BY isFinish ASC, CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END ASC, deadline ASC")
     suspend fun getAllTaskList(): List<Task>
 
     @Query("SELECT * FROM task_table WHERE id = :taskId")
@@ -39,4 +39,10 @@ interface TaskDao {
 
     @Query("SELECT COUNT(*) FROM task_table")
     suspend fun getTotalCount(): Int
+
+    @Query("SELECT COUNT(*) FROM task_table WHERE isFinish = 0")
+    suspend fun getUnfinishedCount(): Int
+
+    @Query("SELECT COUNT(*) FROM task_table WHERE completedAt >= :start AND completedAt <= :end")
+    suspend fun getCompletedTodayCount(start: Long, end: Long): Int
 }

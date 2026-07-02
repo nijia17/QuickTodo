@@ -11,6 +11,10 @@ enum class Category {
     STUDY, WORK, LIFE, OTHER
 }
 
+enum class RecurType {
+    NONE, DAILY, WEEKDAY, WEEKLY
+}
+
 @Entity(tableName = "task_table")
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -19,5 +23,8 @@ data class Task(
     val isFinish: Boolean = false,
     val deadline: Long = 0,
     val category: String = Category.OTHER.name,
-    val priority: String = Priority.LOW.name
+    val priority: String = Priority.LOW.name,
+    val isRecurring: Boolean = false,
+    val recurType: String = RecurType.NONE.name,
+    val completedAt: Long = 0
 )
