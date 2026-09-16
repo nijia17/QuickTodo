@@ -97,9 +97,6 @@ app/src/main/java/com/example/quicktodo/
 └── TimePickerHelper.kt      # 时间选择器
 ```
 
-## 许可证
-
-MIT License
 
 ## 贡献
 
